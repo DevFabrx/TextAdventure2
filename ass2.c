@@ -336,6 +336,7 @@ int gameLoop(Chapter* chapter)
     if (fgets(line, sizeof(line), stdin) == NULL) {
       continue;
     }
+    
     input = line[0];
 
     if(input == 'A')
