@@ -59,7 +59,7 @@ int gameLoop(Chapter* root_chapter);
 int getChapterTitle(FILE* file, char* title);
 int isCorrupt(char* data);
 Chapter* createChapters(char* chapter_data);
-void freeAll(Chapter* root_chapter);
+void freeAll(void* root_chapter);
 Chapter* createChapters(char* chapter_data);
 int printChapterToConsole(Chapter* chapter);
 
@@ -99,8 +99,12 @@ int main(int argc, char* argv[])
   }
   Chapter* root_chapter = createChapters(root_data);
   Chapter* current_chapter = root_chapter;
-  gameLoop(root_chapter);
-  freeAll(root_chapter);
+  int game_loop_error = gameLoop(root_chapter);
+  if(game_loop_error == 0)
+  {
+    return EXIT_SUCCESS;
+  }
+  //freeAll(root_chapter);
   return EXIT_SUCCESS;
 }
 
@@ -201,8 +205,8 @@ char* readFile(FILE* file)
   fclose(file);
 
   //buffer[length_counter] = '\n';
-  buffer = (char*) realloc(buffer, buffer_length+1);
-  buffer[length_counter+1] = '\0';
+  //buffer = (char*) realloc(buffer, buffer_length+1);
+  buffer[length_counter] = '\0';
   //buffer = realloc(buffer, length_counter+1);
   return buffer;
 }
@@ -227,24 +231,21 @@ int isCorrupt(char* file_data)
   char* chapter_B = strtok(NULL, "\n");
   char* chapter_B_type = &chapter_B[strlen(chapter_B)-4];
   char* description = strtok(NULL, "\0");
+  free(string_data);
   if(strcmp(chapter_A, "-") != 0 && strstr(chapter_A_type, ".txt") == NULL)
   {
-    free(string_data);
     return TRUE;
   }
   if(strcmp(chapter_B, "-") != 0 && strstr(chapter_B_type, ".txt") == NULL)
   {
-    free(string_data);
     return TRUE;
   }
   if(description == NULL || strstr(description, "") == NULL)
   {
-    free(string_data);
     return TRUE;
   }
   else
   {
-    free(string_data);
     return FALSE;
   }
   return FALSE;
@@ -327,8 +328,16 @@ int gameLoop(Chapter* chapter)
   char input;
   while(TRUE)
   {
-    printChapterToConsole(chapter);
-    scanf("%c", &input);
+    if(printChapterToConsole(chapter)==0)
+    {
+      return SUCCESS;
+    }
+    char line[256];
+    if (fgets(line, sizeof(line), stdin) == NULL) {
+      continue;
+    }
+    input = line[0];
+
     if(input == 'A')
     {
       if(chapter->next_A_== NULL)
@@ -345,6 +354,10 @@ int gameLoop(Chapter* chapter)
       }
       chapter = chapter->next_B_;
     }
+    else
+    {
+      continue;
+    }
   }
 }
 
@@ -354,7 +367,7 @@ int gameLoop(Chapter* chapter)
 /// Prints the Chapter data in the right format to the console output
 ///
 /// @param  chapter Chapter* to the data of the chapter
-/// @return int error_code
+/// @return int error_code 0 if end, 1 if false User Input
 //
 int printChapterToConsole(Chapter* chapter)
 {
@@ -369,6 +382,7 @@ int printChapterToConsole(Chapter* chapter)
   else
   {
     printf("Deine Wahl [A/B]? ");
+    return 1;
   }
 }
 
@@ -380,15 +394,21 @@ int printChapterToConsole(Chapter* chapter)
 /// @param  root_chapter Root chapter of the binary tree data structure
 /// @return void
 //
-void freeAll(Chapter* root_chapter)
+/*
+void freeAll(void* root_chapter)
 {
   if(root_chapter->next_A_ != NULL)
   {
     freeAll(root_chapter->next_A_);
+    freeAll(root_chapter->title_);
+    freeAll(root_chapter->text_);
   }
   if(root_chapter->next_B_ != NULL)
   {
     freeAll(root_chapter->next_B_);
+    freeAll(root_chapter->title_);
+    freeAll(root_chapter->text_);
   }
   free(root_chapter);
 }
+*/
