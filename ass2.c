@@ -175,19 +175,19 @@ Chapter* createChapters(char* chapter_data)
 char* readFile(FILE* file)
 {
   //char* buffer = (char*) malloc(LINE_BUFFER * sizeof(char));
-  char* buffer = (char*) malloc(sizeof(char));
+  char* buffer = (char*) malloc(LINE_BUFFER*sizeof(char));
   //int buffer_length = LINE_BUFFER;
 
-  int buffer_length = 0;
+  int buffer_length = LINE_BUFFER;
   int length_counter = 0;
   char c;
   while((c=fgetc(file)) != EOF)
   {
     //if(length_counter == buffer_length-1)
-    if(length_counter == length_counter)
+    if(length_counter == buffer_length-2)
     {
       //buffer_length += LINE_BUFFER;
-      buffer_length += 1;
+      buffer_length += LINE_BUFFER;
 
       buffer = (char*) realloc(buffer, buffer_length);
       if(buffer == NULL)
@@ -200,7 +200,7 @@ char* readFile(FILE* file)
   }
   //buffer[length_counter] = '\n';
   //buffer = (char*) realloc(buffer, buffer_length+1);
-  buffer[length_counter] = '\0';
+  buffer[length_counter+1] = '\0';
   //buffer = realloc(buffer, length_counter+1);
   return buffer;
 }
@@ -225,7 +225,7 @@ int isCorrupt(char* file_data)
   char* chapter_B = strtok(NULL, "\n");
   char* chapter_B_type = &chapter_B[strlen(chapter_B)-4];
   char* description = strtok(NULL, "\0");
-  //free(string_data);
+  //free(string_data); das free ist böse
   if(strcmp(chapter_A, "-") != 0 && strstr(chapter_A_type, ".txt") == NULL)
   {
     return TRUE;
@@ -242,6 +242,7 @@ int isCorrupt(char* file_data)
   {
     return FALSE;
   }
+  free(string_data);
   return FALSE;
 }
 
@@ -328,7 +329,7 @@ int gameLoop(Chapter* chapter)
     }
     char line[256];
     if (fgets(line, sizeof(line), stdin) == NULL) {
-      continue;
+      return 0;
     }
 
     input = line[0];
