@@ -53,7 +53,6 @@ typedef enum _ErrorCodes_
 // Function Prototypes
 void parseErrorCode(int error_code);
 int parseCommandLineInput(char** command_line_input, int argc, char* argv[]);
-int readFiles(char* name_of_start_file);
 char* readFile(FILE* file);
 int gameLoop(Chapter* root_chapter);
 int getChapterTitle(FILE* file, char* title);
@@ -117,7 +116,7 @@ int main(int argc, char* argv[])
 //
 Chapter* createChapters(char* chapter_data)
 {
-  char* string_copy = (char*) malloc(strlen(chapter_data)*sizeof(char));
+  char* string_copy = (char*) malloc((strlen(chapter_data)+1)*sizeof(char));
   //string_copy = (char*) realloc(string_copy, strlen(chapter_data));
   //char* string_copy = (char*) malloc(sizeof(char)*strlen(chapter_data));
   //string_copy = strncpy(string_copy, chapter_data, strlen(chapter_data));
@@ -177,14 +176,12 @@ Chapter* createChapters(char* chapter_data)
 char* readFile(FILE* file)
 {
   //char* buffer = (char*) malloc(LINE_BUFFER * sizeof(char));
-  char* buffer = (char*) malloc(1 * sizeof(char));
+  char* buffer = (char*) malloc(sizeof(char));
   //int buffer_length = LINE_BUFFER;
 
   int buffer_length = 0;
   int length_counter = 0;
   char c;
-  //Testkommentar
-
   while((c=fgetc(file)) != EOF)
   {
     //if(length_counter == buffer_length-1)
@@ -222,7 +219,7 @@ char* readFile(FILE* file)
 //
 int isCorrupt(char* file_data)
 {
-  char* string_data = (char*) malloc(sizeof(char)*strlen(file_data));
+  char* string_data = (char*) malloc(sizeof(char)*(strlen(file_data)+1));
   strcpy(string_data,file_data);
   //string_data = strncpy(string_data, file_data, strlen(file_data));
   char* title = strtok(string_data, "\n");
@@ -336,7 +333,7 @@ int gameLoop(Chapter* chapter)
     if (fgets(line, sizeof(line), stdin) == NULL) {
       continue;
     }
-    
+
     input = line[0];
 
     if(input == 'A')
