@@ -51,15 +51,13 @@ typedef enum _ErrorCodes_
 }ErrorCodes;
 
 // Function Prototypes
-void parseErrorCode(int error_code);
+int parseErrorCode(int error_code);
 int parseCommandLineInput(char** command_line_input, int argc, char* argv[]);
 char* readFile(FILE* file);
 int gameLoop(Chapter* root_chapter);
-int getChapterTitle(FILE* file, char* title);
 int isCorrupt(char* data);
 Chapter* createChapters(char* chapter_data);
 void freeAll(void* root_chapter);
-Chapter* createChapters(char* chapter_data);
 int printChapterToConsole(Chapter* chapter);
 
 
@@ -75,27 +73,33 @@ int printChapterToConsole(Chapter* chapter);
 //
 int main(int argc, char* argv[])
 {
-  //char command_line_input[LINE_BUFFER];
   char* command_line_input;
+  int input_error = parseErrorCode(parseCommandLineInput(&command_line_input,
+                                                         argc, argv));
   // Parses the command line command_line_input and handles all the possible errors.
-  parseErrorCode(parseCommandLineInput(&command_line_input, argc, argv));
-  //FILE* file = fopen("start_of_adventure.txt", "r");
+  if(input_error != 0)
+  {
+    return input_error;
+  }
 
   FILE* file = fopen(command_line_input, "r");
-  if(file == NULL)
+  if(file == NULL) // check if fopen returned an error
   {
-    printf("Cannot open file.\n");
+    return FILE_READ_ERROR;
   }
 
   char* root_data = readFile(file);
   fclose(file);
 
-  //TODO: Error Handling
-  if(isCorrupt(root_data))
+  if(isCorrupt(root_data)) // check if file data is corrupt
   {
     return FILE_READ_ERROR;
   }
   Chapter* root_chapter = createChapters(root_data);
+  if(root_chapter == NULL)
+  {
+    return FILE_READ_ERROR;
+  }
   Chapter* current_chapter = root_chapter;
   int game_loop_error = gameLoop(root_chapter);
   if(game_loop_error == 0)
@@ -116,16 +120,11 @@ int main(int argc, char* argv[])
 Chapter* createChapters(char* chapter_data)
 {
   char* string_copy = (char*) malloc((strlen(chapter_data)+1)*sizeof(char));
-  //string_copy = (char*) realloc(string_copy, strlen(chapter_data));
-  //char* string_copy = (char*) malloc(sizeof(char)*strlen(chapter_data));
-  //string_copy = strncpy(string_copy, chapter_data, strlen(chapter_data));
-  strcpy(string_copy,chapter_data);
+  strncpy(string_copy,chapter_data, strlen(chapter_data)+1);
   Chapter* new_chapter = (Chapter*) malloc(sizeof(Chapter));
   char* title = strtok(string_copy, "\n");
   char* chapter_A = strtok(NULL, "\n");
-  //char* chapter_A_type = &chapter_A[strlen(chapter_A)-4];
   char* chapter_B = strtok(NULL, "\n");
-  //char* chapter_B_type = &chapter_B[strlen(chapter_B)-4];
   char* description = strtok(NULL, "\0");
   new_chapter->title_ = title;
   new_chapter->text_ = description;
@@ -134,10 +133,14 @@ Chapter* createChapters(char* chapter_data)
     FILE* file = fopen(chapter_A,"r");
     if(file == NULL)
     {
-      printf("Cannot open file.\n");
+      return NULL;
     }
-
-    new_chapter->next_A_ = createChapters(readFile(file));
+    char* chapter_data = readFile(file);
+    if(isCorrupt(chapter_data) == 1)
+    {
+      return NULL;
+    }
+    new_chapter->next_A_ = createChapters(chapter_data);
     fclose(file);
   }
   else
@@ -151,8 +154,13 @@ Chapter* createChapters(char* chapter_data)
     {
       printf("Cannot open file.\n");
     }
+    char* chapter_data = readFile(file);
+    if(isCorrupt(chapter_data) == 1)
+    {
+      return NULL;
+    }
 
-    new_chapter->next_B_ = createChapters(readFile(file));
+    new_chapter->next_B_ = createChapters(chapter_data);
     fclose(file);
   }
   else
@@ -217,7 +225,7 @@ char* readFile(FILE* file)
 int isCorrupt(char* file_data)
 {
   char* string_data = (char*) malloc(sizeof(char)*(strlen(file_data)+1));
-  strcpy(string_data,file_data);
+  strncpy(string_data,file_data, strlen(file_data)+1);
   //string_data = strncpy(string_data, file_data, strlen(file_data));
   char* title = strtok(string_data, "\n");
   char* chapter_A = strtok(NULL, "\n");
@@ -284,28 +292,24 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[])
 /// @param error_code error code
 /// @return void
 //
-void parseErrorCode(int error_code)
+int parseErrorCode(int error_code)
 {
-  // TODO NO EXIT()
   switch(error_code)
   {
     case 0:
-      break;
+      return 0;
     case 1:
       printf("%s", USAGE_ERROR_TEXT);
-      exit(USAGE_ERROR);
+      return USAGE_ERROR;
     case 2:
       printf("%s", OUT_OF_MEMORY_ERROR_TEXT);
-      exit(OUT_OF_MEMORY_ERROR);
+      return OUT_OF_MEMORY_ERROR;
     case 3:
       printf("%s", FILE_READ_ERROR_TEXT);
-      exit(FILE_READ_ERROR);
+      return FILE_READ_ERROR;
     case 4:
       printf("%s", INPUT_ERROR_TEXT);
       break;
-    default:
-      printf("Unknown Error Code");
-      exit(UNKNOWN_ERROR);
   }
 }
 
