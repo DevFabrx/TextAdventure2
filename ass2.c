@@ -88,7 +88,6 @@ int main(int argc, char* argv[])
   }
 
   char* root_data = readFile(file);
-
   fclose(file);
 
   //TODO: Error Handling
@@ -199,8 +198,6 @@ char* readFile(FILE* file)
     buffer[length_counter] = c;
     length_counter += 1;
   }
-  fclose(file);
-
   //buffer[length_counter] = '\n';
   //buffer = (char*) realloc(buffer, buffer_length+1);
   buffer[length_counter] = '\0';
@@ -228,7 +225,7 @@ int isCorrupt(char* file_data)
   char* chapter_B = strtok(NULL, "\n");
   char* chapter_B_type = &chapter_B[strlen(chapter_B)-4];
   char* description = strtok(NULL, "\0");
-  free(string_data);
+  //free(string_data);
   if(strcmp(chapter_A, "-") != 0 && strstr(chapter_A_type, ".txt") == NULL)
   {
     return TRUE;
