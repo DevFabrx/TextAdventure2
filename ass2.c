@@ -23,9 +23,9 @@
 #define EXIT_SUCCESS 0
 #define TRUE 1
 #define FALSE 0
-#define USAGE_ERROR_TEXT "Usage: ./ass2 [file-name]\n"
+#define USAGE_ERROR_TEXT "Usage: ./ass2 "
 #define OUT_OF_MEMORY_ERROR_TEXT "[ERR] Out of memory.\n"
-#define FILE_READ_ERROR_TEXT "[ERR] Could not read file [filename].\n"
+#define FILE_READ_ERROR_TEXT "[ERR] Could not read file"
 #define INPUT_ERROR_TEXT "[ERR] Please enter A or B.\n"
 
 
@@ -51,13 +51,13 @@ typedef enum _ErrorCodes_
 }ErrorCodes;
 
 // Function Prototypes
-int parseErrorCode(int error_code);
+int parseErrorCode(int error_code, char* current_filename);
 int parseCommandLineInput(char** command_line_input, int argc, char* argv[]);
 char* readFile(FILE* file);
 int gameLoop(Chapter* root_chapter);
 int isCorrupt(char* data);
-Chapter* createChapters(char* chapter_data);
-void freeAll(void* root_chapter);
+Chapter* createChapters(char* chapter_data, char** current_filename);
+void freeAll(Chapter* root_chapter);
 int printChapterToConsole(Chapter* chapter);
 
 
@@ -74,14 +74,18 @@ int printChapterToConsole(Chapter* chapter);
 int main(int argc, char* argv[])
 {
   char* command_line_input;
+  char* current_filename;
+  // Parses the command line command_line_input and handles all the possible
+  // errors.
   int input_error = parseErrorCode(parseCommandLineInput(&command_line_input,
-                                                         argc, argv));
-  // Parses the command line command_line_input and handles all the possible errors.
+                                                         argc, argv),
+                                   *command_line_input);
   if(input_error != 0)
   {
     return input_error;
   }
-
+  int length = strlen(command_line_input);
+  strncpy(current_filename, command_line_input, length+1);
   FILE* file = fopen(command_line_input, "r");
   if(file == NULL) // check if fopen returned an error
   {
@@ -95,10 +99,10 @@ int main(int argc, char* argv[])
   {
     return FILE_READ_ERROR;
   }
-  Chapter* root_chapter = createChapters(root_data);
+  Chapter* root_chapter = createChapters(root_data, &current_filename);
   if(root_chapter == NULL)
   {
-    return FILE_READ_ERROR;
+    return parseErrorCode(FILE_READ_ERROR, &current_filename);
   }
   Chapter* current_chapter = root_chapter;
   int game_loop_error = gameLoop(root_chapter);
@@ -106,7 +110,7 @@ int main(int argc, char* argv[])
   {
     return EXIT_SUCCESS;
   }
-  //freeAll(root_chapter);
+  freeAll(root_chapter);
   return EXIT_SUCCESS;
 }
 
@@ -117,10 +121,10 @@ int main(int argc, char* argv[])
 /// @param chapter_data char* that contains all Chapter data
 /// @return new_chapter New Chapter* to the filled data struct
 //
-Chapter* createChapters(char* chapter_data)
+Chapter* createChapters(char* chapter_data, char** current_filename)
 {
   char* string_copy = (char*) malloc((strlen(chapter_data)+1)*sizeof(char));
-  strncpy(string_copy,chapter_data, strlen(chapter_data)+1);
+  strncpy(string_copy, chapter_data, strlen(chapter_data)+1);
   Chapter* new_chapter = (Chapter*) malloc(sizeof(Chapter));
   char* title = strtok(string_copy, "\n");
   char* chapter_A = strtok(NULL, "\n");
@@ -130,17 +134,29 @@ Chapter* createChapters(char* chapter_data)
   new_chapter->text_ = description;
   if(strcmp(chapter_A,"-")!=0)
   {
+    //free(chapter_A);
+    strncpy(current_filename, chapter_A, strlen(chapter_A)+1);
     FILE* file = fopen(chapter_A,"r");
     if(file == NULL)
     {
+      free(string_copy);
       return NULL;
     }
-    char* chapter_data = readFile(file);
+    //char* chapter_data = readFile(file);
+    chapter_data = readFile(file);
     if(isCorrupt(chapter_data) == 1)
     {
+      free(string_copy);
+      fclose(file);
       return NULL;
     }
-    new_chapter->next_A_ = createChapters(chapter_data);
+    new_chapter->next_A_ = createChapters(chapter_data, current_filename);
+    if(new_chapter->next_A_ == NULL)
+    {
+      fclose(file);
+      free(string_copy);
+      return NULL;
+    }
     fclose(file);
   }
   else
@@ -149,18 +165,22 @@ Chapter* createChapters(char* chapter_data)
   }
   if(strcmp(chapter_B, "-") != 0)
   {
+    //free(chapter_B);
+    strncpy(current_filename, chapter_A, strlen(chapter_A)+1);
     FILE* file = fopen(chapter_B,"r");
     if(file == NULL)
     {
-      printf("Cannot open file.\n");
+      free(string_copy);
+      return FILE_READ_ERROR;
     }
     char* chapter_data = readFile(file);
     if(isCorrupt(chapter_data) == 1)
     {
+      free(string_copy);
+      fclose(file);
       return NULL;
     }
-
-    new_chapter->next_B_ = createChapters(chapter_data);
+    new_chapter->next_B_ = createChapters(chapter_data, current_filename);
     fclose(file);
   }
   else
@@ -192,9 +212,8 @@ char* readFile(FILE* file)
   while((c=fgetc(file)) != EOF)
   {
     //if(length_counter == buffer_length-1)
-    if(length_counter == buffer_length-2)
+    if(length_counter == buffer_length)
     {
-      //buffer_length += LINE_BUFFER;
       buffer_length += LINE_BUFFER;
 
       buffer = (char*) realloc(buffer, buffer_length);
@@ -206,10 +225,7 @@ char* readFile(FILE* file)
     buffer[length_counter] = c;
     length_counter += 1;
   }
-  //buffer[length_counter] = '\n';
-  //buffer = (char*) realloc(buffer, buffer_length+1);
-  buffer[length_counter+1] = '\0';
-  //buffer = realloc(buffer, length_counter+1);
+  buffer[length_counter] = '\0';
   return buffer;
 }
 
@@ -233,26 +249,28 @@ int isCorrupt(char* file_data)
   char* chapter_B = strtok(NULL, "\n");
   char* chapter_B_type = &chapter_B[strlen(chapter_B)-4];
   char* description = strtok(NULL, "\0");
-  //free(string_data); das free ist böse
-  if(strcmp(chapter_A, "-") != 0 && strstr(chapter_A_type, ".txt") == NULL)
+
+  // Next Chapter A value is correct
+  int condition_A = (strcmp(chapter_A, "-") == 0) || (strstr(chapter_A_type, ""
+      ".txt") != NULL);
+  // Next Chapter B value is correct
+  int condition_B = (strcmp(chapter_B, "-") == 0) || (strstr(chapter_B_type, ""
+  ".txt") != NULL);
+  // Description is correct
+  int condition_C = (description != NULL) || (strstr(description, "") != NULL);
+
+  if(condition_A && condition_B && condition_C)
   {
-    return TRUE;
-  }
-  if(strcmp(chapter_B, "-") != 0 && strstr(chapter_B_type, ".txt") == NULL)
-  {
-    return TRUE;
-  }
-  if(description == NULL || strstr(description, "") == NULL)
-  {
-    return TRUE;
+    //free(string_data); TODO blub
+    return FALSE;
   }
   else
   {
-    return FALSE;
+    free(string_data);
+    return TRUE;
   }
-  free(string_data);
-  return FALSE;
 }
+
 
 //-----------------------------------------------------------------------------
 ///
@@ -268,19 +286,26 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[])
 {
   char* file_format = ".txt";
   // check if no user input or too many user inputs
-  if(argc != 2)
+  if(argc == 1 || argc > 2)
   {
     return USAGE_ERROR;
   }
   char* pointer_to_dot_in_string = strchr(argv[1], '.');
-  // check if .txt is appended or not, if not append it to the file string
   *command_line_input = argv[1];
-  if(strcmp(pointer_to_dot_in_string, file_format) != 0)
+  if(pointer_to_dot_in_string == NULL)
   {
     *command_line_input = strcat(argv[1], file_format);
-    return EXIT_SUCCESS;
+    return SUCCESS;
   }
-  return EXIT_SUCCESS;
+  // check if .txt is appended or not, if not append it to the file string
+
+  if(strcmp(pointer_to_dot_in_string, file_format) != 0)
+  {
+    *pointer_to_dot_in_string='\0';
+    *command_line_input = strcat(argv[1], file_format);
+    return SUCCESS;
+  }
+  return SUCCESS;
 }
 
 
@@ -292,20 +317,24 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[])
 /// @param error_code error code
 /// @return void
 //
-int parseErrorCode(int error_code)
+int parseErrorCode(int error_code, char* current_filename)
 {
+  char* filename_copy;
+  int length = strlen(*current_filename);
+  strncpy(filename_copy, current_filename, length+1);
+  filename_copy[length-4] = '\0';
   switch(error_code)
   {
     case 0:
       return 0;
     case 1:
-      printf("%s", USAGE_ERROR_TEXT);
+      printf("%s %s\n", USAGE_ERROR_TEXT, filename_copy);
       return USAGE_ERROR;
     case 2:
       printf("%s", OUT_OF_MEMORY_ERROR_TEXT);
       return OUT_OF_MEMORY_ERROR;
     case 3:
-      printf("%s", FILE_READ_ERROR_TEXT);
+      printf("%s %s.\n", FILE_READ_ERROR_TEXT, filename_copy);
       return FILE_READ_ERROR;
     case 4:
       printf("%s", INPUT_ERROR_TEXT);
@@ -394,21 +423,17 @@ int printChapterToConsole(Chapter* chapter)
 /// @param  root_chapter Root chapter of the binary tree data structure
 /// @return void
 //
-/*
-void freeAll(void* root_chapter)
+void freeAll(Chapter* root_chapter)
 {
   if(root_chapter->next_A_ != NULL)
   {
     freeAll(root_chapter->next_A_);
-    freeAll(root_chapter->title_);
-    freeAll(root_chapter->text_);
   }
   if(root_chapter->next_B_ != NULL)
   {
     freeAll(root_chapter->next_B_);
-    freeAll(root_chapter->title_);
-    freeAll(root_chapter->text_);
   }
+  free(root_chapter->title_);
+  free(root_chapter->text_);
   free(root_chapter);
 }
-*/
