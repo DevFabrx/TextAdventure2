@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     return input_error;
   }
   //int length = strlen(command_line_input);
-  strcpy(current_filename, command_line_input);
+  //strcpy(current_filename, command_line_input);
   FILE* file = fopen(command_line_input, "r");
   if(file == NULL) // check if fopen returned an error
   {
@@ -295,11 +295,11 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[],
   }
   char* pointer_to_dot_in_string = strchr(argv[1], '.');
   *command_line_input = argv[1];
-  *current_filename = argv[1];
+  *current_filename = strdup(argv[1]);
   if(pointer_to_dot_in_string == NULL)
   {
     *command_line_input = strcat(argv[1], file_format);
-    *current_filename = strcat(argv[1], file_format);
+    *current_filename = strdup(strcat(argv[1], file_format));
     return SUCCESS;
   }
   // check if .txt is appended or not, if not append it to the file string
@@ -308,7 +308,7 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[],
   {
     *pointer_to_dot_in_string='\0';
     *command_line_input = strcat(argv[1], file_format);
-    *current_filename = strcat(argv[1], file_format);
+    *current_filename = strdup(strcat(argv[1], file_format));
     return SUCCESS;
   }
   return SUCCESS;
@@ -326,8 +326,8 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[],
 int parseErrorCode(int error_code, char** current_filename)
 {
   //int length = strlen(*current_filename)+1;
-  char* filename_copy = strcpy(filename_copy, current_filename);
-  filename_copy[strlen(filename_copy)-3] = '\0';
+  char* filename_copy = strdup(current_filename);
+  filename_copy[strlen(filename_copy)-4] = '\0';
   switch(error_code)
   {
     case 0:
