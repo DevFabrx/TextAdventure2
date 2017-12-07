@@ -34,8 +34,8 @@ typedef struct _Chapter_
 {
   char* title_;
   char* text_;
-  struct _ChapterStruct_* next_A_;
-  struct _ChapterStruct_* next_B_;
+  struct _Chapter_* next_A_;
+  struct _Chapter_* next_B_;
 } Chapter;
 
 
@@ -47,7 +47,6 @@ typedef enum _ErrorCodes_
   OUT_OF_MEMORY_ERROR,
   FILE_READ_ERROR,
   USER_INPUT_ERROR,
-  UNKNOWN_ERROR
 }ErrorCodes;
 
 // Function Prototypes
@@ -91,7 +90,7 @@ int main(int argc, char* argv[])
   FILE* file = fopen(command_line_input, "r");
   if(file == NULL) // check if fopen returned an error
   {
-    return FILE_READ_ERROR;
+    return parseErrorCode(FILE_READ_ERROR, &current_filename);
   }
 
   char* root_data = readFile(file);
@@ -106,7 +105,7 @@ int main(int argc, char* argv[])
   {
     return parseErrorCode(FILE_READ_ERROR, &current_filename);
   }
-  Chapter* current_chapter = root_chapter;
+  //Chapter* current_chapter = root_chapter;
   int game_loop_error = gameLoop(root_chapter);
   if(game_loop_error == 0)
   {
@@ -137,7 +136,7 @@ Chapter* createChapters(char* chapter_data, char** current_filename)
   if(strcmp(chapter_A,"-")!=0)
   {
     //free(chapter_A);
-    strncpy(current_filename, chapter_A, strlen(chapter_A)+1);
+    *current_filename = strdup(chapter_A);
     FILE* file = fopen(chapter_A,"r");
     if(file == NULL)
     {
@@ -168,12 +167,12 @@ Chapter* createChapters(char* chapter_data, char** current_filename)
   if(strcmp(chapter_B, "-") != 0)
   {
     //free(chapter_B);
-    strncpy(current_filename, chapter_A, strlen(chapter_A)+1);
+    *current_filename = strdup(chapter_B);
     FILE* file = fopen(chapter_B,"r");
     if(file == NULL)
     {
       free(string_copy);
-      return FILE_READ_ERROR;
+      return NULL;
     }
     char* chapter_data = readFile(file);
     if(isCorrupt(chapter_data) == 1)
@@ -245,7 +244,7 @@ int isCorrupt(char* file_data)
   char* string_data = (char*) malloc(sizeof(char)*(strlen(file_data)+1));
   strncpy(string_data,file_data, strlen(file_data)+1);
   //string_data = strncpy(string_data, file_data, strlen(file_data));
-  char* title = strtok(string_data, "\n");
+  strtok(string_data, "\n");
   char* chapter_A = strtok(NULL, "\n");
   char* chapter_A_type = &chapter_A[strlen(chapter_A)-4];
   char* chapter_B = strtok(NULL, "\n");
@@ -289,26 +288,35 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[],
 {
   char* file_format = ".txt";
   // check if no user input or too many user inputs
-  if(argc == 1 || argc > 2)
+  if(argc != 2)
   {
+    *command_line_input = argv[0];
+    char* pointer_to_backslash = strrchr(*command_line_input, 92);
+    if(pointer_to_backslash == NULL)
+    {
+      *current_filename = strdup(*command_line_input);
+      return USAGE_ERROR;
+    }
+    *current_filename = strcpy(*command_line_input, pointer_to_backslash+1);
     return USAGE_ERROR;
   }
   char* pointer_to_dot_in_string = strchr(argv[1], '.');
   *command_line_input = argv[1];
   *current_filename = strdup(argv[1]);
-  if(pointer_to_dot_in_string == NULL)
+  if(pointer_to_dot_in_string != NULL)
   {
-    *command_line_input = strcat(argv[1], file_format);
-    *current_filename = strdup(strcat(argv[1], file_format));
+    //*command_line_input = strcat(argv[1], file_format);
+    //*current_filename = strdup(*command_line_input);
     return SUCCESS;
   }
   // check if .txt is appended or not, if not append it to the file string
 
-  if(strcmp(pointer_to_dot_in_string, file_format) != 0)
+  if(pointer_to_dot_in_string == NULL)
   {
-    *pointer_to_dot_in_string='\0';
+    //*pointer_to_dot_in_string='\0';
+    //*current_filename = strdup(*command_line_input);
     *command_line_input = strcat(argv[1], file_format);
-    *current_filename = strdup(strcat(argv[1], file_format));
+    *current_filename = strdup(*command_line_input);
     return SUCCESS;
   }
   return SUCCESS;
@@ -325,9 +333,9 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[],
 //
 int parseErrorCode(int error_code, char** current_filename)
 {
-  //int length = strlen(*current_filename)+1;
-  char* filename_copy = strdup(current_filename);
-  filename_copy[strlen(filename_copy)-4] = '\0';
+  char* filename_copy = strdup(*current_filename);
+  char* pointer_to_dot = strrchr(filename_copy, '.');
+  pointer_to_dot[0] = 0;
   switch(error_code)
   {
     case 0:
@@ -345,6 +353,7 @@ int parseErrorCode(int error_code, char** current_filename)
       printf("%s", INPUT_ERROR_TEXT);
       break;
   }
+  return 0;
 }
 
 //-----------------------------------------------------------------------------
