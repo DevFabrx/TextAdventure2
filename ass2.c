@@ -51,8 +51,9 @@ typedef enum _ErrorCodes_
 }ErrorCodes;
 
 // Function Prototypes
-int parseErrorCode(int error_code, char* current_filename);
-int parseCommandLineInput(char** command_line_input, int argc, char* argv[]);
+int parseErrorCode(int error_code, char** current_filename);
+int parseCommandLineInput(char** command_line_input, int argc, char* argv[],
+                          char** current_filename);
 char* readFile(FILE* file);
 int gameLoop(Chapter* root_chapter);
 int isCorrupt(char* data);
@@ -78,14 +79,15 @@ int main(int argc, char* argv[])
   // Parses the command line command_line_input and handles all the possible
   // errors.
   int input_error = parseErrorCode(parseCommandLineInput(&command_line_input,
-                                                         argc, argv),
-                                   *command_line_input);
+                                                         argc, argv,
+                                                         &current_filename),
+                                   &command_line_input);
   if(input_error != 0)
   {
     return input_error;
   }
-  int length = strlen(command_line_input);
-  strncpy(current_filename, command_line_input, length+1);
+  //int length = strlen(command_line_input);
+  strcpy(current_filename, command_line_input);
   FILE* file = fopen(command_line_input, "r");
   if(file == NULL) // check if fopen returned an error
   {
@@ -282,7 +284,8 @@ int isCorrupt(char* file_data)
 /// @param argv pointer to the input array from main
 /// @return int error code
 //
-int parseCommandLineInput(char** command_line_input, int argc, char* argv[])
+int parseCommandLineInput(char** command_line_input, int argc, char* argv[],
+                          char** current_filename)
 {
   char* file_format = ".txt";
   // check if no user input or too many user inputs
@@ -292,9 +295,11 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[])
   }
   char* pointer_to_dot_in_string = strchr(argv[1], '.');
   *command_line_input = argv[1];
+  *current_filename = argv[1];
   if(pointer_to_dot_in_string == NULL)
   {
     *command_line_input = strcat(argv[1], file_format);
+    *current_filename = strcat(argv[1], file_format);
     return SUCCESS;
   }
   // check if .txt is appended or not, if not append it to the file string
@@ -303,6 +308,7 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[])
   {
     *pointer_to_dot_in_string='\0';
     *command_line_input = strcat(argv[1], file_format);
+    *current_filename = strcat(argv[1], file_format);
     return SUCCESS;
   }
   return SUCCESS;
@@ -317,12 +323,11 @@ int parseCommandLineInput(char** command_line_input, int argc, char* argv[])
 /// @param error_code error code
 /// @return void
 //
-int parseErrorCode(int error_code, char* current_filename)
+int parseErrorCode(int error_code, char** current_filename)
 {
-  char* filename_copy;
-  int length = strlen(*current_filename);
-  strncpy(filename_copy, current_filename, length+1);
-  filename_copy[length-4] = '\0';
+  //int length = strlen(*current_filename)+1;
+  char* filename_copy = strcpy(filename_copy, current_filename);
+  filename_copy[strlen(filename_copy)-3] = '\0';
   switch(error_code)
   {
     case 0:
